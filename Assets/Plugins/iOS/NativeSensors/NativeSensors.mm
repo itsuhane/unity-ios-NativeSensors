@@ -1,51 +1,84 @@
 #import <CoreMotion/CoreMotion.h>
 
-#define GRAVITY_FACTOR (-9.80665)
+typedef void (*DeviceMotionCallback)(double t, double rx, double ry, double rz, double ax, double ay, double az);
+static DeviceMotionCallback deviceMotionCallback = nullptr;
 
-typedef void (*GyroscopeCallback)(double t, double x, double y, double z);
-typedef void (*AccelerometerCallback)(double t, double x, double y, double z);
-
-static GyroscopeCallback gyroscopeCallback = nullptr;
-static AccelerometerCallback accelerometerCallback = nullptr;
 static CMMotionManager* sMotionManager  = nil;
-
-static CMGyroHandler gyroscopeHandler = ^(CMGyroData *gyroscopeData, NSError *error) {
-    if(error == nil && gyroscopeData && gyroscopeCallback) {
-        (*gyroscopeCallback)(gyroscopeData.timestamp, gyroscopeData.rotationRate.x, gyroscopeData.rotationRate.y, gyroscopeData.rotationRate.z);
+static CMDeviceMotionHandler deviceMotionHandler = ^(CMDeviceMotion *deviceMotion, NSError *error) {
+    if(error == nil && deviceMotion && deviceMotionCallback) {
+        (*deviceMotionCallback)(deviceMotion.timestamp, deviceMotion.rotationRate.x, deviceMotion.rotationRate.y, deviceMotion.rotationRate.z, deviceMotion.userAcceleration.x, deviceMotion.userAcceleration.y, deviceMotion.userAcceleration.z);
     }
 };
 
-static CMAccelerometerHandler accelerometerHandler = ^(CMAccelerometerData *accelerometerData, NSError *error) {
-    if(error == nil && accelerometerData && accelerometerCallback) {
-        (*accelerometerCallback)(accelerometerData.timestamp, GRAVITY_FACTOR*accelerometerData.acceleration.x, GRAVITY_FACTOR*accelerometerData.acceleration.y, GRAVITY_FACTOR*accelerometerData.acceleration.z);
-    }
-};
-
-extern "C" void NativeSensorsSetDelegate(GyroscopeCallback g, AccelerometerCallback a) {
-    gyroscopeCallback = g;
-    accelerometerCallback = a;
-}
-
-extern "C" void NativeSensorsStart()
-{
-    if (!sMotionManager)
+extern "C" void DeviceMotionStart(DeviceMotionCallback m) {
+    if (!sMotionManager) {
         sMotionManager = [[CMMotionManager alloc] init];
-
-    if (sMotionManager.gyroAvailable) {
-        [sMotionManager setGyroUpdateInterval: 1.0];
-        [sMotionManager startGyroUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:gyroscopeHandler];
     }
-
-    if (sMotionManager.accelerometerAvailable)
-    {
-        [sMotionManager setAccelerometerUpdateInterval: 1.0];
-        [sMotionManager startAccelerometerUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:accelerometerHandler];
+    if (sMotionManager.deviceMotionAvailable) {
+        deviceMotionCallback = m;
+        if (deviceMotionCallback != nullptr) {
+            [sMotionManager startDeviceMotionUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:deviceMotionHandler];
+        }
     }
 }
 
-extern "C" void NativeSensorsStop() {
-    if (sMotionManager != nil) {
-        [sMotionManager stopGyroUpdates];
-        [sMotionManager stopAccelerometerUpdates];
+extern "C" void DeviceMotionStop() {
+    if(sMotionManager != nil && deviceMotionCallback != nullptr) {
+        [sMotionManager stopDeviceMotionUpdates];
+        deviceMotionCallback = nullptr;
     }
 }
+
+typedef void (*HeadphoneMotionCallback)(double t, double rx, double ry, double rz, double ax, double ay, double az);
+typedef void (*HeadphoneConnectCallback)();
+typedef void (*HeadphoneDisconnectCallback)();
+
+static HeadphoneMotionCallback headphoneMotionCallback = nullptr;
+static HeadphoneConnectCallback headphoneConnectCallback = nullptr;
+static HeadphoneDisconnectCallback headphoneDisconnectCallback = nullptr;
+
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 140000
+
+API_AVAILABLE(ios(14.0))
+static CMHeadphoneMotionManager *sHeadphoneMotionManager = nil;
+
+API_AVAILABLE(ios(14.0))
+static CMHeadphoneDeviceMotionHandler headphoneDeviceMotionHandler = ^(CMDeviceMotion *deviceMotion, NSError *error) {
+    if(error == nil && deviceMotion && headphoneMotionCallback) {
+        (*headphoneMotionCallback)(deviceMotion.timestamp, deviceMotion.rotationRate.x, deviceMotion.rotationRate.y, deviceMotion.rotationRate.z, deviceMotion.userAcceleration.x, deviceMotion.userAcceleration.y, deviceMotion.userAcceleration.z);
+    }
+};
+
+extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {
+    if (@available(iOS 14.0, *)) {
+        if (!sHeadphoneMotionManager) {
+            sHeadphoneMotionManager = [[CMHeadphoneMotionManager alloc] init];
+        }
+        if (sHeadphoneMotionManager.deviceMotionAvailable) {
+            headphoneMotionCallback = m;
+            headphoneConnectCallback = c;
+            headphoneDisconnectCallback = d;
+            if (headphoneMotionCallback != nullptr) {
+                [sHeadphoneMotionManager startDeviceMotionUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:headphoneDeviceMotionHandler];
+            }
+        }
+    }
+}
+
+extern "C" void HeadphoneMotionStop() {
+    if (@available(iOS 14.0, *)) {
+        if(sHeadphoneMotionManager != nil && headphoneMotionCallback != nullptr) {
+            [sHeadphoneMotionManager stopDeviceMotionUpdates];
+            headphoneMotionCallback = nullptr;
+            headphoneConnectCallback = nullptr;
+            headphoneDisconnectCallback = nullptr;
+        }
+    }
+}
+
+#else
+
+extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {}
+extern "C" void HeadphoneMotionStop() {}
+
+#endif
