@@ -51,6 +51,7 @@ static CMHeadphoneDeviceMotionHandler headphoneDeviceMotionHandler = ^(CMDeviceM
 
 extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {
     if (@available(iOS 14.0, *)) {
+        NSLog(@"[NativeSensors] API available.");
         if (!sHeadphoneMotionManager) {
             sHeadphoneMotionManager = [[CMHeadphoneMotionManager alloc] init];
         }
@@ -61,7 +62,11 @@ extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnect
             if (headphoneMotionCallback != nullptr) {
                 [sHeadphoneMotionManager startDeviceMotionUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:headphoneDeviceMotionHandler];
             }
+        } else {
+            NSLog(@"[NativeSensors] Device Motion Unavailable.");
         }
+    } else {
+        NSLog(@"[NativeSensors] API unavailable.");
     }
 }
 
@@ -78,7 +83,9 @@ extern "C" void HeadphoneMotionStop() {
 
 #else
 
-extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {}
+extern "C" void HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {
+    NSLog(@"[NativeSensors] iOS version too low.");
+}
 extern "C" void HeadphoneMotionStop() {}
 
 #endif
