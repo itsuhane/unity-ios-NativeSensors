@@ -16,18 +16,18 @@ public class MotionDisplay : MonoBehaviour, DeviceMotionHandler, HeadphoneMotion
     private DeviceMotion deviceMotion;
     private HeadphoneMotion headphoneMotion;
 
-    public void OnDeviceMotion(double t, Vector3 rotationRate, Vector3 userAcceleration)
+    public void OnDeviceMotion(ref DeviceMotionData motionData)
     {
-        DMTimestampText.text = string.Format("T: {0,12:#######.00}", t);
-        DMRotationRateText.text = string.Format("R: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", rotationRate.x, rotationRate.y, rotationRate.z);
-        DMUserAccelerationText.text = string.Format("A: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", userAcceleration.x, userAcceleration.y, userAcceleration.z);
+        DMTimestampText.text = string.Format("T: {0,12:#######0.00}", motionData.timestamp);
+        DMRotationRateText.text = string.Format("R: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", motionData.rotationRate.x, motionData.rotationRate.y, motionData.rotationRate.z);
+        DMUserAccelerationText.text = string.Format("A: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", motionData.userAcceleration.x, motionData.userAcceleration.y, motionData.userAcceleration.z);
     }
 
-    public void OnHeadphoneMotion(double t, Vector3 rotationRate, Vector3 userAcceleration)
+    public void OnHeadphoneMotion(ref DeviceMotionData motionData)
     {
-        HMTimestampText.text = string.Format("T: {0,12:#######.00}", t);
-        HMRotationRateText.text = string.Format("R: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", rotationRate.x, rotationRate.y, rotationRate.z);
-        HMUserAccelerationText.text = string.Format("A: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", userAcceleration.x, userAcceleration.y, userAcceleration.z);
+        HMTimestampText.text = string.Format("T: {0,12:#######0.00}", motionData.timestamp);
+        HMRotationRateText.text = string.Format("R: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", motionData.rotationRate.x, motionData.rotationRate.y, motionData.rotationRate.z);
+        HMUserAccelerationText.text = string.Format("A: ({0,8:#0.000}, {1,8:#0.000}, {2,8:#0.000})", motionData.userAcceleration.x, motionData.userAcceleration.y, motionData.userAcceleration.z);
     }
 
     public void OnHeadphoneConnect()

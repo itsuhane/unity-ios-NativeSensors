@@ -5,20 +5,22 @@ using AOT;
 
 namespace NativeSensors
 {
+    using HeadphoneMotionData = DeviceMotionData;
+
     public interface HeadphoneMotionHandler
     {
-        void OnHeadphoneMotion(double t, Vector3 rotationRate, Vector3 userAcceleration);
+        void OnHeadphoneMotion(ref HeadphoneMotionData motionData);
         void OnHeadphoneConnect();
         void OnHeadphoneDisconnect();
     }
 
+    [DefaultExecutionOrder(-1000)]
     public class HeadphoneMotion : MonoBehaviour
     {
         private class HeadphoneMotionCore
         {
             private static HeadphoneMotionCore _Instance = null;
             private static object _Lock = new object();
-            private static bool _Started = false;
 
             public static HeadphoneMotionCore Instance
             {
@@ -31,17 +33,56 @@ namespace NativeSensors
                     }
                 }
             }
-            public ConcurrentDictionary<HeadphoneMotion, HeadphoneMotionHandler> handlers = new ConcurrentDictionary<HeadphoneMotion, HeadphoneMotionHandler>();
+
+            private ConcurrentDictionary<HeadphoneMotion, HeadphoneMotionHandler> handlers = new ConcurrentDictionary<HeadphoneMotion, HeadphoneMotionHandler>();
+            private bool started = false;
+
+            public void RegisterHandler(HeadphoneMotion motion, HeadphoneMotionHandler handler)
+            {
+                handlers.TryAdd(motion, handler);
+            }
+
+            public void UnregisterHandler(HeadphoneMotion motion)
+            {
+                HeadphoneMotionHandler handler;
+                handlers.TryRemove(motion, out handler);
+            }
 
 #if UNITY_IOS
-            delegate void HeadphoneMotionDelegate(double t, double rx, double ry, double rz, double ax, double ay, double az);
+            delegate void HeadphoneMotionDelegate(
+                double t,
+                double attx, double atty, double attz, double attw,
+                double rrx, double rry, double rrz,
+                double gx, double gy, double gz,
+                double uax, double uay, double uaz,
+                double mfx, double mfy, double mfz,
+                int mfa, double heading, int loc
+            );
             delegate void HeadphoneConnectDelegate();
             delegate void HeadphoneDisconnectDelegate();
 
             [MonoPInvokeCallback(typeof(HeadphoneMotionDelegate))]
-            private static void OnHeadphoneMotion(double t, double rx, double ry, double rz, double ax, double ay, double az)
+            private static void OnHeadphoneMotion(
+                double t,
+                double attx, double atty, double attz, double attw,
+                double rrx, double rry, double rrz,
+                double gx, double gy, double gz,
+                double uax, double uay, double uaz,
+                double mfx, double mfy, double mfz,
+                int mfa, double heading, int loc
+            )
             {
-                foreach (var h in Instance.handlers) h.Value.OnHeadphoneMotion(t, new Vector3((float)rx, (float)ry, (float)rz), new Vector3((float)ax, (float)ay, (float)az));
+                HeadphoneMotionData motionData;
+                motionData.timestamp = t;
+                motionData.attitude = new Quaternion((float)attx, (float)atty, (float)attz, (float)attw);
+                motionData.rotationRate = new Vector3((float)rrx, (float)rry, (float)rrz);
+                motionData.gravity = new Vector3((float)gx, (float)gy, (float)gz);
+                motionData.userAcceleration = new Vector3((float)uax, (float)uay, (float)uaz);
+                motionData.magneticField = new Vector3((float)mfx, (float)mfy, (float)mfz);
+                motionData.magneticFieldAccuracy = (MagneticFieldCalibrationAccuracy)mfa;
+                motionData.heading = heading;
+                motionData.sensorLocation = (SensorLocation)loc;
+                foreach (var h in Instance.handlers) h.Value.OnHeadphoneMotion(ref motionData);
             }
 
             [MonoPInvokeCallback(typeof(HeadphoneConnectDelegate))]
@@ -62,24 +103,13 @@ namespace NativeSensors
             [DllImport("__Internal", CallingConvention = CallingConvention.Cdecl)]
             private static extern void HeadphoneMotionStop();
 
-            public void RegisterHandler(HeadphoneMotion motion, HeadphoneMotionHandler handler)
-            {
-                handlers.TryAdd(motion, handler);
-            }
-
-            public void UnregisterHandler(HeadphoneMotion motion)
-            {
-                HeadphoneMotionHandler handler;
-                handlers.TryRemove(motion, out handler);
-            }
-
             public void StartSensors()
             {
                 lock (_Lock)
                 {
-                    if (!_Started)
+                    if (!started)
                     {
-                        _Started = HeadphoneMotionStart(OnHeadphoneMotion, OnHeadphoneConnect, OnHeadphoneDisconnect);
+                        started = HeadphoneMotionStart(OnHeadphoneMotion, OnHeadphoneConnect, OnHeadphoneDisconnect);
                     }
                 }
             }
@@ -88,15 +118,17 @@ namespace NativeSensors
             {
                 lock (_Lock)
                 {
-                    if (_Started)
+                    if (started)
                     {
-                        _Started = false;
+                        started = false;
                         HeadphoneMotionStop();
                     }
                 }
             }
 #else
-            void StartSensors() {} // Nothing we can do.
+            void StartSensors() {
+                Debug.Log("[NativeSensors] HeadphoneMotion requires iOS (>=14.0) device.");
+            }
             void StopSensors() {}
 #endif
             protected HeadphoneMotionCore() {}
@@ -109,7 +141,7 @@ namespace NativeSensors
         {
             if (handler != null)
             {
-                if (!(handler is DeviceMotionHandler))
+                if (!(handler is HeadphoneMotionHandler))
                 {
                     handler = null;
                 }
