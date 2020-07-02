@@ -3,8 +3,8 @@ using UnityEditor;
 namespace NativeSensors
 {
 #if UNITY_EDITOR
-    [CustomEditor(typeof(DeviceMotion))]
-    public class DeviceMotionEditor : Editor
+    [CustomEditor(typeof(GyroscopeMotion))]
+    public class GyroscopeMotionEditor : Editor
     {
         SerializedProperty handler;
         SerializedProperty frequency;
@@ -13,15 +13,15 @@ namespace NativeSensors
         {
             handler = serializedObject.FindProperty("handler");
             frequency = serializedObject.FindProperty("_frequency");
-            DeviceMotion.frequency = frequency.intValue;
+            GyroscopeMotion.frequency = frequency.intValue;
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
             EditorGUILayout.PropertyField(handler);
-            DeviceMotion.frequency = EditorGUILayout.IntSlider("Update Frequency", DeviceMotion.frequency, 1, 100);
-            frequency.intValue = DeviceMotion.frequency;
+            GyroscopeMotion.frequency = EditorGUILayout.IntSlider("Update Frequency", GyroscopeMotion.frequency, 1, 100);
+            frequency.intValue = GyroscopeMotion.frequency;
             serializedObject.ApplyModifiedProperties();
         }
     }

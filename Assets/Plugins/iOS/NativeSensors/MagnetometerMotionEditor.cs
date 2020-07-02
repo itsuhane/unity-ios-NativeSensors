@@ -3,8 +3,8 @@ using UnityEditor;
 namespace NativeSensors
 {
 #if UNITY_EDITOR
-    [CustomEditor(typeof(DeviceMotion))]
-    public class DeviceMotionEditor : Editor
+    [CustomEditor(typeof(MagnetometerMotion))]
+    public class MagnetometerMotionEditor : Editor
     {
         SerializedProperty handler;
         SerializedProperty frequency;
@@ -13,15 +13,15 @@ namespace NativeSensors
         {
             handler = serializedObject.FindProperty("handler");
             frequency = serializedObject.FindProperty("_frequency");
-            DeviceMotion.frequency = frequency.intValue;
+            MagnetometerMotion.frequency = frequency.intValue;
         }
 
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
             EditorGUILayout.PropertyField(handler);
-            DeviceMotion.frequency = EditorGUILayout.IntSlider("Update Frequency", DeviceMotion.frequency, 1, 100);
-            frequency.intValue = DeviceMotion.frequency;
+            MagnetometerMotion.frequency = EditorGUILayout.IntSlider("Update Frequency", MagnetometerMotion.frequency, 1, 100);
+            frequency.intValue = MagnetometerMotion.frequency;
             serializedObject.ApplyModifiedProperties();
         }
     }

@@ -1,6 +1,143 @@
 #import <CoreMotion/CoreMotion.h>
 #include <math.h>
 
+static CMMotionManager* sMotionManager  = nil;
+
+/* Accelerometer */
+
+typedef void (*AccelerometerMotionCallback)(
+    double t,
+    double ax, double ay, double az
+);
+static AccelerometerMotionCallback accelerometerMotionCallback = nullptr;
+
+static CMAccelerometerHandler accelerometerHandler = ^(CMAccelerometerData *accelerometerData, NSError *error) {
+    if (error == nil && accelerometerData && accelerometerMotionCallback) {
+        (*accelerometerMotionCallback)(
+            accelerometerData.timestamp,
+            accelerometerData.acceleration.x, accelerometerData.acceleration.y, accelerometerData.acceleration.z
+        );
+    }
+};
+
+extern "C" bool AccelerometerMotionStart(double interval, AccelerometerMotionCallback g) {
+    accelerometerMotionCallback = g;
+    if (!sMotionManager) {
+        sMotionManager = [[CMMotionManager alloc] init];
+    }
+    if (sMotionManager.accelerometerAvailable) {
+        sMotionManager.accelerometerUpdateInterval = interval;
+        [sMotionManager startAccelerometerUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:accelerometerHandler];
+        NSLog(@"[NativeSensors] AccelerometerMotion updating with interval %.3f.", interval);
+        return true;
+    } else {
+        NSLog(@"[NativeSensors] AccelerometerMotion unavailable. Did you grant motion usage permission?");
+    }
+    (*accelerometerMotionCallback)(
+        0,
+        NAN, 0, NAN
+    );
+    accelerometerMotionCallback = nullptr;
+    return false;
+}
+
+extern "C" void AccelerometerMotionStop() {
+    if (sMotionManager != nil && accelerometerMotionCallback != nullptr) {
+        [sMotionManager stopAccelerometerUpdates];
+        accelerometerMotionCallback = nullptr;
+    }
+}
+
+/* GyroscopeMotion */
+
+typedef void (*GyroscopeMotionCallback)(
+    double t,
+    double rrx, double rry, double rrz
+);
+static GyroscopeMotionCallback gyroscopeMotionCallback = nullptr;
+
+static CMGyroHandler gyroHandler = ^(CMGyroData *gyroData, NSError *error) {
+    if (error == nil && gyroData && gyroscopeMotionCallback) {
+        (*gyroscopeMotionCallback)(
+            gyroData.timestamp,
+            gyroData.rotationRate.x, gyroData.rotationRate.y, gyroData.rotationRate.z
+        );
+    }
+};
+
+extern "C" bool GyroscopeMotionStart(double interval, GyroscopeMotionCallback g) {
+    gyroscopeMotionCallback = g;
+    if (!sMotionManager) {
+        sMotionManager = [[CMMotionManager alloc] init];
+    }
+    if (sMotionManager.gyroAvailable) {
+        sMotionManager.gyroUpdateInterval = interval;
+        [sMotionManager startGyroUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:gyroHandler];
+        NSLog(@"[NativeSensors] Gyroscope motion updating with interval %.3f.", interval);
+        return true;
+    } else {
+        NSLog(@"[NativeSensors] Gyroscope motion unavailable. Did you grant motion usage permission?");
+    }
+    (*gyroscopeMotionCallback)(
+        0,
+        NAN, 0, NAN
+    );
+    gyroscopeMotionCallback = nullptr;
+    return false;
+}
+
+extern "C" void GyroscopeMotionStop() {
+    if (sMotionManager != nil && gyroscopeMotionCallback != nullptr) {
+        [sMotionManager stopGyroUpdates];
+        gyroscopeMotionCallback = nullptr;
+    }
+}
+
+/* Magnetometer */
+
+typedef void (*MagnetometerMotionCallback)(
+    double t,
+    double mfx, double mfy, double mfz
+);
+static MagnetometerMotionCallback magnetometerMotionCallback = nullptr;
+
+static CMMagnetometerHandler magnetometerHandler = ^(CMMagnetometerData *magnetometerData, NSError *error) {
+    if (error == nil && magnetometerData && magnetometerMotionCallback) {
+        (*magnetometerMotionCallback)(
+            magnetometerData.timestamp,
+            magnetometerData.magneticField.x, magnetometerData.magneticField.y, magnetometerData.magneticField.z
+        );
+    }
+};
+
+extern "C" bool MagnetometerMotionStart(double interval, MagnetometerMotionCallback g) {
+    magnetometerMotionCallback = g;
+    if (!sMotionManager) {
+        sMotionManager = [[CMMotionManager alloc] init];
+    }
+    if (sMotionManager.magnetometerAvailable) {
+        sMotionManager.magnetometerUpdateInterval = interval;
+        [sMotionManager startMagnetometerUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:magnetometerHandler];
+        NSLog(@"[NativeSensors] MagnetometerMotion updating with interval %.3f.", interval);
+        return true;
+    } else {
+        NSLog(@"[NativeSensors] MagnetometerMotion unavailable. Did you grant motion usage permission?");
+    }
+    (*magnetometerMotionCallback)(
+        0,
+        NAN, 0, NAN
+    );
+    magnetometerMotionCallback = nullptr;
+    return false;
+}
+
+extern "C" void MagnetometerMotionStop() {
+    if (sMotionManager != nil && magnetometerMotionCallback != nullptr) {
+        [sMotionManager stopMagnetometerUpdates];
+        magnetometerMotionCallback = nullptr;
+    }
+}
+
 /* DeviceMotion */
 
 typedef void (*DeviceMotionCallback)(
@@ -14,9 +151,8 @@ typedef void (*DeviceMotionCallback)(
 );
 static DeviceMotionCallback deviceMotionCallback = nullptr;
 
-static CMMotionManager* sMotionManager  = nil;
 static CMDeviceMotionHandler deviceMotionHandler = ^(CMDeviceMotion *deviceMotion, NSError *error) {
-    if(error == nil && deviceMotion && deviceMotionCallback) {
+    if (error == nil && deviceMotion && deviceMotionCallback) {
         double heading;
         if (@available(iOS 11.0, *)) {
             heading = deviceMotion.heading;
@@ -77,7 +213,7 @@ extern "C" bool DeviceMotionStart(double interval, DeviceMotionCallback m) {
 }
 
 extern "C" void DeviceMotionStop() {
-    if(sMotionManager != nil && deviceMotionCallback != nullptr) {
+    if (sMotionManager != nil && deviceMotionCallback != nullptr) {
         [sMotionManager stopDeviceMotionUpdates];
         deviceMotionCallback = nullptr;
     }
@@ -125,7 +261,7 @@ static CMHeadphoneMotionManager *sHeadphoneMotionManager = nil;
 static HeadphoneMotionDelegate *sHeadphoneMotionDelegate = nil;
 
 static CMHeadphoneDeviceMotionHandler headphoneDeviceMotionHandler = ^(CMDeviceMotion *deviceMotion, NSError *error) {
-    if(error == nil && deviceMotion && headphoneMotionCallback) {
+    if (error == nil && deviceMotion && headphoneMotionCallback) {
         double heading;
         if (@available(iOS 11.0, *)) {
             heading = deviceMotion.heading;
@@ -200,7 +336,7 @@ extern "C" bool HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnect
 
 extern "C" void HeadphoneMotionStop() {
     if (@available(iOS 14.0, *)) {
-        if(sHeadphoneMotionManager != nil && headphoneMotionCallback != nullptr) {
+        if (sHeadphoneMotionManager != nil && headphoneMotionCallback != nullptr) {
             [sHeadphoneMotionManager stopDeviceMotionUpdates];
             headphoneMotionCallback = nullptr;
             headphoneConnectCallback = nullptr;
