@@ -73,10 +73,10 @@ extern "C" bool GyroscopeMotionStart(double interval, GyroscopeMotionCallback g)
     if (sMotionManager.gyroAvailable) {
         sMotionManager.gyroUpdateInterval = interval;
         [sMotionManager startGyroUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:gyroHandler];
-        NSLog(@"[NativeSensors] Gyroscope motion updating with interval %.3f.", interval);
+        NSLog(@"[NativeSensors] GyroscopeMotion updating with interval %.3f.", interval);
         return true;
     } else {
-        NSLog(@"[NativeSensors] Gyroscope motion unavailable. Did you grant motion usage permission?");
+        NSLog(@"[NativeSensors] GyroscopeMotion unavailable. Did you grant motion usage permission?");
     }
     (*gyroscopeMotionCallback)(
         0,
@@ -186,18 +186,23 @@ static CMDeviceMotionHandler deviceMotionHandler = ^(CMDeviceMotion *deviceMotio
     }
 };
 
-extern "C" bool DeviceMotionStart(double interval, DeviceMotionCallback m) {
+extern "C" bool DeviceMotionStart(double interval, int referenceFrame, DeviceMotionCallback m) {
     deviceMotionCallback = m;
     if (!sMotionManager) {
         sMotionManager = [[CMMotionManager alloc] init];
     }
     if (sMotionManager.deviceMotionAvailable) {
         sMotionManager.deviceMotionUpdateInterval = interval;
-        [sMotionManager startDeviceMotionUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:deviceMotionHandler];
-        NSLog(@"[NativeSensors] Device motion updating with interval %.3f.", interval);
+        CMAttitudeReferenceFrame frame =
+            referenceFrame == 1 ? CMAttitudeReferenceFrameXArbitraryCorrectedZVertical :
+            referenceFrame == 2 ? CMAttitudeReferenceFrameXMagneticNorthZVertical :
+            referenceFrame == 3 ? CMAttitudeReferenceFrameXTrueNorthZVertical :
+            /* else */ CMAttitudeReferenceFrameXArbitraryZVertical;
+        [sMotionManager startDeviceMotionUpdatesUsingReferenceFrame:frame toQueue:[NSOperationQueue mainQueue] withHandler:deviceMotionHandler];
+        NSLog(@"[NativeSensors] DeviceMotion updating with interval %.3f.", interval);
         return true;
     } else {
-        NSLog(@"[NativeSensors] Device motion unavailable. Did you grant motion usage permission?");
+        NSLog(@"[NativeSensors] DeviceMotion unavailable. Did you grant motion usage permission?");
     }
     (*deviceMotionCallback)(
         0,
@@ -314,10 +319,10 @@ extern "C" bool HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnect
             [sHeadphoneMotionManager startDeviceMotionUpdatesToQueue:[NSOperationQueue mainQueue] withHandler:headphoneDeviceMotionHandler];
             return true;
         } else {
-            NSLog(@"[NativeSensors] Headphone motion unavailable. Your device may not support headphone motion.");
+            NSLog(@"[NativeSensors] HeadphoneMotion unavailable. Your device may not support headphone motion.");
         }
     } else {
-        NSLog(@"[NativeSensors] API unavailable. Either the deployment target or the iOS on your phone has version below 14.0.");
+        NSLog(@"[NativeSensors] (HeadphoneMotion) API unavailable. Either the deployment target or the iOS on your phone has version below 14.0.");
     }
     (*headphoneMotionCallback)(
         0,
@@ -348,7 +353,7 @@ extern "C" void HeadphoneMotionStop() {
 #else
 
 extern "C" bool HeadphoneMotionStart(HeadphoneMotionCallback m, HeadphoneConnectCallback c, HeadphoneDisconnectCallback d) {
-    NSLog(@"[NativeSensors] SDK version too low. Make sure your SDK supports iOS >= 14.0.");
+    NSLog(@"[NativeSensors] (HeadphoneMotion) SDK version too low. Make sure your SDK supports iOS >= 14.0.");
     headphoneMotionCallback = m;
     headphoneConnectCallback = c;
     headphoneDisconnectCallback = d;

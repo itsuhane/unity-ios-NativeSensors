@@ -782,6 +782,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _frequency: 4
+  _attitudeReferenceX: 0
   handler: {fileID: 343059616}
 --- !u!4 &343059615
 Transform:

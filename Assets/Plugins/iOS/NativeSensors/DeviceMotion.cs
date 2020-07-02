@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -18,6 +19,14 @@ namespace NativeSensors
         Default = 0,
         HeadphoneLeft = 1,
         HeadphoneRight = 2
+    }
+
+    public enum AttitudeReferenceFrameX
+    {
+        Arbitrary = 0,
+        ArbitraryCorrected = 1,
+        MagneticNorth = 2,
+        TrueNorth = 3
     }
 
     public struct DeviceMotionData
@@ -108,19 +117,19 @@ namespace NativeSensors
             }
 
             [DllImport("__Internal", CallingConvention = CallingConvention.Cdecl)]
-            private static extern bool DeviceMotionStart(double interval, DeviceMotionDelegate deviceMotionDelegate);
+            private static extern bool DeviceMotionStart(double interval, int referenceFrame, DeviceMotionDelegate deviceMotionDelegate);
 
             [DllImport("__Internal", CallingConvention = CallingConvention.Cdecl)]
             private static extern void DeviceMotionStop();
 
-            public void StartSensors(int frequency)
+            public void StartSensors(int frequency, AttitudeReferenceFrameX referenceFrame)
             {
                 lock (_Lock)
                 {
                     if (!started)
                     {
                         double interval = 1.0/(double)frequency;
-                        started = DeviceMotionStart(interval, OnDeviceMotion);
+                        started = DeviceMotionStart(interval, (int)referenceFrame, OnDeviceMotion);
                     }
                 }
             }
@@ -137,7 +146,7 @@ namespace NativeSensors
                 }
             }
 #else
-            void StartSensors(int frequency)
+            void StartSensors(int frequency, AttitudeReferenceFrameX referenceFrame)
             {
                 Debug.Log("[NativeSensors] DeviceMotion requires iOS device.");
             }
@@ -150,6 +159,11 @@ namespace NativeSensors
         public static int frequency = 100;
         [SerializeField][HideInInspector]
         private int _frequency = frequency;
+
+        public static AttitudeReferenceFrameX attitudeReferenceX = AttitudeReferenceFrameX.Arbitrary;
+        [SerializeField][HideInInspector]
+        private AttitudeReferenceFrameX _attitudeReferenceX = attitudeReferenceX;
+
         public Component handler = null;
 
 #if UNITY_EDITOR
@@ -168,6 +182,7 @@ namespace NativeSensors
         void Awake()
         {
             frequency = _frequency;
+            attitudeReferenceX = _attitudeReferenceX;
         }
 
         void OnEnable()
@@ -185,7 +200,7 @@ namespace NativeSensors
 
         public void StartSensors()
         {
-            DeviceMotionCore.Instance.StartSensors(frequency);
+            DeviceMotionCore.Instance.StartSensors(frequency, attitudeReferenceX);
         }
 
         public void StopSensors()
