@@ -50,8 +50,6 @@ public class MotionDisplay : MonoBehaviour, DeviceMotionHandler, HeadphoneMotion
         HMUserAccelerationText.text = "";
         deviceMotion = GetComponent<DeviceMotion>();
         headphoneMotion = GetComponent<HeadphoneMotion>();
-        deviceMotion.deviceMotionHandler = this;
-        headphoneMotion.headphoneMotionHandler = this;
     }
 
     void OnEnable()
