@@ -2,7 +2,6 @@ using UnityEditor;
 
 namespace NativeSensors
 {
-#if UNITY_EDITOR
     [CustomEditor(typeof(DeviceMotion))]
     public class DeviceMotionEditor : Editor
     {
@@ -34,5 +33,4 @@ namespace NativeSensors
             serializedObject.ApplyModifiedProperties();
         }
     }
-#endif
 }
